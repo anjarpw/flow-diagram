@@ -1,4 +1,4 @@
-import { generateFlow } from "../src/flow"
+import { generateGraph } from "../src/flow"
 
 type MyContext = {
   log: string[]
@@ -41,14 +41,14 @@ describe('My work', () => {
 
 
 
-    const flow = generateFlow<number, MyContext>()
-      .continuedBy(multiplyBy2)
-      .continuedBy(addedBy1)
+    const graph = generateGraph<MyContext>()
+      .register("STEP1", multiplyBy2)
+      .continuedBy("STEP2", addedBy1)
 
     const ctx = { log: [] }
 
     // when
-    const result = await flow.startWith(3, ctx)
+    const result = await graph.generateStream("STEP1", "STEP2").run(3, ctx)
 
     // then
     expect(result).toEqual(7)
@@ -65,10 +65,10 @@ describe('My work', () => {
     const addedBy2 = generateAddedBy(2)
     const addedBy10 = generateAddedBy(10)
 
-    const flow = generateFlow<number, MyContext>()
-      .continuedBy(multiplyBy3)
-      .continuedBy(addedBy2)
-      .stopped().when((x: number, ctx: MyContext) => {
+    const graph = generateGraph<MyContext>()
+      .register("STEP1", multiplyBy3)
+      .continuedBy("STEP2", addedBy2)
+      .stopped().when("STEP3", (x: number, ctx: MyContext) => {
         if (x > 10) {
           ctx.log.push(`STOPPED!: ${x} is greater than 10`)
           return Promise.resolve(true)
@@ -76,44 +76,35 @@ describe('My work', () => {
         ctx.log.push(`NOT STOPPED!: ${x} is NOT greater than 10`)
         return Promise.resolve(false)
       })
-      .continuedBy(addedBy10)
-      .continued().when((x: number, ctx: MyContext) => {
-        if (x % 2 == 0) {
-          ctx.log.push(`CONTINUED!: ${x} is even number`)
-          return Promise.resolve(true)
-        }
-        ctx.log.push(`NOT CONTINUED!: ${x} is NOT even number`)
-        return Promise.resolve(false)
-      })
-      .continuedBy(addedBy2)
+      .continuedBy("STEP4", addedBy10)
+      .continuedBy("STEP5", addedBy2)
 
 
+    const flow = graph.generateStream("STEP1", "STEP5")
     // when
     let ctx = { log: [] }
     let func = async () => {
-      await flow.startWith(1, ctx)
+      await flow.run(5, ctx)
     }
     // then
     await expect(func).rejects.toThrow()
     expect(ctx.log).toEqual([
-      "MULTIPLY BY 3, 1 becomes 3",
-      "ADDED BY 2, 3 becomes 5",
-      "NOT STOPPED!: 5 is NOT greater than 10",
-      "ADDED BY 10, 5 becomes 15",
-      "NOT CONTINUED!: 15 is NOT even number",
+      "MULTIPLY BY 3, 5 becomes 15",
+      "ADDED BY 2, 15 becomes 17",
+      "STOPPED!: 17 is greater than 10"
     ])
 
     // when
     ctx = { log: [] }
-    const result = await flow.startWith(2, ctx)
+    const result = await flow.run(2, ctx)
     // then
     await expect(result).toEqual(20)
+    console.log(ctx.log)
     expect(ctx.log).toEqual([
       "MULTIPLY BY 3, 2 becomes 6",
       "ADDED BY 2, 6 becomes 8",
       "NOT STOPPED!: 8 is NOT greater than 10",
       "ADDED BY 10, 8 becomes 18",
-      "CONTINUED!: 18 is even number",
       "ADDED BY 2, 18 becomes 20",
     ])
 

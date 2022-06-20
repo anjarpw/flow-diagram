@@ -149,7 +149,11 @@ class Cursor<TCtx, TOut> implements ICursor<TCtx, TOut> {
                 return this.graph.from<TOut>(nextKey)
             }
         }
-    }    
+    }  
+    continuedTo(key: string): void {
+        const node = this.getNode()
+        node.setDefaultNextKey(key)
+    }
 }
 
 class Stream<TCtx, TStart, TEnd> implements IStream<TCtx, TStart, TEnd>{

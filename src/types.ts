@@ -16,6 +16,7 @@ export interface IMergeable<TCtx> {
 
 export interface ICursor<TCtx, TOut> {
     continuedBy<TNextOut>(key: string, process: Process<TCtx, TOut, TNextOut>): ICursor<TCtx, TNextOut>
+    continuedTo(key:string): void
     switches(key: string, decider: NextNodeKeyDecider<TCtx, TOut>): void
     stopped(): IWhenable<TCtx, TOut>
     generateStream<TStart>(fromKey: string, toKey?: string): IStream<TCtx, TStart, TOut>
